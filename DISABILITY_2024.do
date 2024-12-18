@@ -117,7 +117,10 @@ replace SSHD_5to17 = 3 if SEE_IND==3 | HEAR_IND ==3 | WALK_IND ==3 | SELF_IND==3
 replace SSHD_5to17 = 4 if SEE_IND==4 | HEAR_IND ==4 | WALK_IND ==4 | SELF_IND==4 | COM_IND==4 | LEARN_IND==4 | REM_IND==4 | CONC_IND==4 | ACC_IND==4 | BEH_IND==4 | FRI_IND==4
 replace SSHD_5to17 = 1 if SSHD_5to17 == 0
 
-label values SSHD_5to17 sshdlb
+gen SSHD_2to17 = SSHD_2to4
+replace SSHD_2to17 = SSHD_5to17 if age>4
+
+label values SSHD* sshdlb
 
 tab sex [iw=wgt2] // 41,345,431 people
 tab FunctionalDifficulty_5to17 if age>=5 & age<=9 [iw=wgt2] // 457,418 pwd 

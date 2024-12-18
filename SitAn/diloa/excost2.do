@@ -23,10 +23,10 @@ replace educ_total_cost_wins=. if educ_total_cost==.
 gen alotofdifficuly = FunctionalDifficulty==1 & ProfoundDifficulty==0 if FunctionalDifficulty!=.
 
 
-
 // Svy settings for analysing data from in-depth questionnaire
 svyset psu [pw=wgt2], strata(strata_psu) fpc(fpc_psu) singleunit(scaled) || ssu, fpc(fpc_ssu) || tsu, strata(strata_tsu) fpc(fpc_tsu)
 
+svy: mean educ_total_cost_wins, over(FunctionalDifficulty_5to17)
 
 mat stat = J(1,10,.)
 foreach var of varlist educ_cost_schoolfees educ_cost_reg educ_cost_exams educ_cost_boarding educ_cost_uniform educ_cost_supplies educ_cost_transport educ_cost_daycare educ_cost_other educ_total_cost {
@@ -196,6 +196,8 @@ reg ln_health i.ProfoundDifficulty  if alotofdifficuly==0 [aw = wgt2], vce(clust
 
 gen personalassistance = has_passistance ==1 if has_passistance !=. & FunctionalDifficulty==1
 
+svy: mean personalassistance if age>
+
 mat stat = J(1,10,.)
 foreach var of varlist personalassistance {
 svy: mean `var', over(sex)
@@ -224,6 +226,7 @@ mat stat = stat \ r(table)' , e(_N)'
 }
 mat list stat
 
+**# Bookmark #3
 mat stat = J(1,10,.)
 foreach var in seeing hearing walking selfcare communicating learning_2to17 remembering_5plus FunctionalDifficulty ProfoundDifficulty {
 svy: mean personalassistance if `var'==1
@@ -232,6 +235,20 @@ mat stat = stat \ (r(table)', e(N))
 mat stat = stat[2..., 1...]
 mat colnames stat = b se t pvalue ll ul df crit eform N
 mat rownames stat = seeing hearing walking selfcare communicating learning_2to17 remembering_5plus FunctionalDifficulty ProfoundDifficulty
+
+**# Bookmark #1
+clonevar severe_5to17 = FunctionalDifficulty_5to17
+replace severe_5to17 = 0 if SSHD_5to17<4
+
+	mat stat = J(1,10,.)
+	foreach var in Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17 {
+	svy: mean personalassistance if `var'==1 & age>=5 & age<18
+	mat stat = stat \ (r(table)', e(N))
+	}
+	mat stat = stat[2..., 1...]
+	mat colnames stat = b se t pvalue ll ul df crit eform N
+	mat rownames stat = Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17
+mat list stat
 
 gen needpersonalassistance = need_passistance ==1 if need_passistance !=. & FunctionalDifficulty==1
 

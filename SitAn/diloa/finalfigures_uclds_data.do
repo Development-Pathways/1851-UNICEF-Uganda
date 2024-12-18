@@ -169,10 +169,10 @@ gen selfcare = .
 	replace selfcare = 4 if selfcare==. * (wgss_selfcare==4 | child5to17_selfcare==4 |  Selfcare_5to17==4 )
 
 gen communicating =.
-	replace communicating = 1 if communcating==. & (wgss_communic==1 | child2to4_communic1==1 | child2to4_communic2==1 | child5to17_communic1==1 | child5to17_communic2==1 )
-	replace communicating =2 if communcating==. & (wgss_communic==2 | child2to4_communic1==2 | child2to4_communic2==2 | child5to17_communic1==2 | child5to17_communic2==2 )
-	replace communicating =3 if communcating==. & (wgss_communic==3 | child2to4_communic1==3 | child2to4_communic2==3 | child5to17_communic1== 3 | child5to17_communic2==3 )
-	replace communicating = 4 if communcating==. & (wgss_communic==4 | child2to4_communic1==4 | child2to4_communic2==4 | child5to17_communic1==4 | child5to17_communic2==4 )
+	replace communicating = 1 if communicating==. & (wgss_communic==1 | child2to4_communic1==1 | child2to4_communic2==1 | child5to17_communic1==1 | child5to17_communic2==1 )
+	replace communicating =2 if communicating==. & (wgss_communic==2 | child2to4_communic1==2 | child2to4_communic2==2 | child5to17_communic1==2 | child5to17_communic2==2 )
+	replace communicating =3 if communicating==. & (wgss_communic==3 | child2to4_communic1==3 | child2to4_communic2==3 | child5to17_communic1== 3 | child5to17_communic2==3 )
+	replace communicating = 4 if communicating==. & (wgss_communic==4 | child2to4_communic1==4 | child2to4_communic2==4 | child5to17_communic1==4 | child5to17_communic2==4 )
 
 gen behaviour = .
 	replace behaviour = 1 if behaviour==. & (child2to4_behaviour==1 | child5to17_behaviour==1 )
