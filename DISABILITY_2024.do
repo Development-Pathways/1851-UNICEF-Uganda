@@ -129,4 +129,4 @@ tab SSHD_2to4 if age>=2 & age<=4 [aw=wgt1]
 tab SSHD_5to17 if age>=15 & age<=17 [aw=wgt1]
 
 mean Seeing_2to4 Hearing_2to4 Walking_2to4 FineMotor_2to4 Communication_2to4 Learning_2to4 Playing_2to4 Behaviour_2to4 if age>=2 & age<=4 [aw=wgt1]
-mean Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 if age>=5 & age<=17 [aw=wgt1]
+mean Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 if age>=5 & age<=17 
