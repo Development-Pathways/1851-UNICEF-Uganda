@@ -1,6 +1,6 @@
 
 do "~/Documents/GitHub/1851-UNICEF-Uganda/DISABILITY_2024.do"
-do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/finalfigures_uclds_data.do"
+* do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/finalfigures_uclds_data.do"
 do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/excost2.do"
 
 * check each household has one head
@@ -11,9 +11,17 @@ assert head_count == 1
 *egen hh_lv = tag(hhid)
 
 * albinism and dwarfism
-tab has_dwarfism if age<18 //[aw=wgt2]
-tab has_albinism if age<18 [aw=wgt2]
+tab has_dwarfism /*if age<18*/[aw=wgt1]
+tab has_albinism /*if age<18*/ [aw=wgt1]
 
+global child2to4 Seeing_2to4 Hearing_2to4 Walking_2to4 FineMotor_2to4 Communication_2to4 Learning_2to4 Playing_2to4 Behaviour_2to4
+global child5to17 Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 MakingFriends_5to17 AcceptingChange_5to17 Behaviour_5to17 Anxiety_5to17 Depression_5to17
+
+mean $child2to4 [aw=wgt1]
+tab1 $child2to4
+
+mean $child5to17 [aw=wgt1]
+tab1 $child5to17
 
 * income distribution
 
@@ -24,6 +32,8 @@ cumul hh_income_w [aw=wgt1], gen(cdf_income)
 replace cdf_income = cdf_income*100
 
 gen hh_income_wk = hh_income_w/1000
+
+gen hh_income_wk_month = hh_income_wk/12
 
 twoway	(line hh_income_wk cdf_income if /*cdf_income<=95 &*/ pid==1 [aw=wgt1], sort lcolor("0 57 114")), ///
 xtitle("Cumulative percentage of total household income (%)") xtitle(, color("70 70 70")) ///
@@ -113,14 +123,10 @@ mean health_exp_total_h  [aw=wgt2], over(FunctionalDifficulty)
 
 mean health_exp_medicine [aw=wgt1], over(FunctionalDifficulty)
 
-* education-related costs
-
-
-
 * food consumption score
 
 mat A = J(3,1,.)
-foreach var in Seeing_2to17 Hearing_2to17 Walking_2to17 Communication_2to17 Learning_2to17 Behaviour_2to17  Selfcare_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty severe_child {
+foreach var in /*Seeing_2to17 Hearing_2to17 Walking_2to17 Communication_2to17 Learning_2to17 Behaviour_2to17  Selfcare_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty severe_child*/ moderate_child {
 	svy: tab FCS if `var'==1 & age>=2 & age<18
 	mat A = A , e(b)'
 }
@@ -145,10 +151,15 @@ mat list A
 
 tab educ_attend if age>=5 & age<18 [aw=wgt1]
 
+mat A = J(3,1,.)
+foreach var in /*$child5to17*/ moderate_child severe_child {
+	svy: tab educ_attend if `var'==1 & age>=5 & age<18
+	mat A = A , e(b)'
+}
+mat list A
+
+
 * Seeing_2to4 Hearing_2to4 Walking_2to4 FineMotor_2to4 Communication_2to4 Learning_2to4 Playing_2to4 Behaviour_2to4 FunctionalDifficulty_2to4 Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17
-
-* assistance 
-
 
 *******************************************************************************
 
@@ -161,7 +172,9 @@ foreach imp in Seeing Hearing Walking Communication Learning Behaviour {
 clonevar severe_child = FunctionalDifficulty if age<18
 replace severe_child = 0 if !missing(severe_child) & SSHD_2to17<4
 
-global vars Seeing_2to17 Hearing_2to17 Walking_2to17 Communication_2to17 Learning_2to17 Behaviour_2to17 FineMotor_2to4 Playing_2to4 Selfcare_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty severe_child
+gen moderate_child = (SSHD_2to17==3) if !missing(SSHD_2to17)
+
+global vars Seeing_2to17 Hearing_2to17 Walking_2to17 Communication_2to17 Learning_2to17 Behaviour_2to17 FineMotor_2to4 Playing_2to4 Selfcare_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty severe_child moderate_child
 
 	mat stat = J(1,10,.)
 	foreach var in $vars {
@@ -191,11 +204,50 @@ mat list stat
 
 	mat stat = J(1,10,.)
 	foreach var in $vars {
-	svy: mean hh_income_wk if `var'==1 & age<18
+	svy: mean hh_income_wk_month if `var'==1 & age<18
 	mat stat = stat \ (r(table)', e(N))
 	}
 
 	mat stat = stat[2..., 1...]
 	mat colnames stat = b se t pvalue ll ul df crit eform N
 	mat rownames stat = $vars
+mat list stat
+
+** educ_total_cost_wins
+
+	mat stat = J(1,10,.)
+	foreach var in $child5to17 moderate_child severe_child {
+	svy: mean educ_total_cost_wins if `var'==1 & age>=5 & age<18
+	mat stat = stat \ (r(table)', e(N))
+	}
+
+	mat stat = stat[2..., 1...]
+	mat colnames stat = b se t pvalue ll ul df crit eform N
+	mat rownames stat = $child5to17 moderate_child severe_child
+mat list stat
+
+svy: mean educ_total_cost_wins, over(FunctionalDifficulty_5to17)
+
+** mean_hours_passistance
+
+	mat stat = J(1,10,.)
+	foreach var in $child5to17 severe_5to17 moderate_child {
+	svy: mean personalassistance if `var'==1 & age>=5 & age<18
+	mat stat = stat \ (r(table)', e(N))
+	}
+	mat stat = stat[2..., 1...]
+	mat colnames stat = b se t pvalue ll ul df crit eform N
+	mat rownames stat = $child5to17 severe_5to17 moderate_child 
+mat list stat
+
+**
+
+	mat stat = J(1,10,.)
+	foreach var in $child5to17 severe_5to17 moderate_child  {
+	svy: mean mean_hours_passistance if `var'==1 & age>=5 & age<18
+	mat stat = stat \ (r(table)', e(N))
+	}
+	mat stat = stat[2..., 1...]
+	mat colnames stat = b se t pvalue ll ul df crit eform N
+	mat rownames stat = $child5to17 severe_5to17 moderate_child 
 mat list stat

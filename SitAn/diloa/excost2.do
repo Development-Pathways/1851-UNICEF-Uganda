@@ -241,13 +241,13 @@ clonevar severe_5to17 = FunctionalDifficulty_5to17
 replace severe_5to17 = 0 if SSHD_5to17<4
 
 	mat stat = J(1,10,.)
-	foreach var in Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17 {
+	foreach var in Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17 moderate_child {
 	svy: mean personalassistance if `var'==1 & age>=5 & age<18
 	mat stat = stat \ (r(table)', e(N))
 	}
 	mat stat = stat[2..., 1...]
 	mat colnames stat = b se t pvalue ll ul df crit eform N
-	mat rownames stat = Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17
+	mat rownames stat = Seeing_5to17 Hearing_5to17 Walking_5to17 Selfcare_5to17 Communication_5to17 Learning_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 Behaviour_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 FunctionalDifficulty_5to17 severe_5to17 moderate_child
 mat list stat
 
 gen needpersonalassistance = need_passistance ==1 if need_passistance !=. & FunctionalDifficulty==1
