@@ -146,9 +146,10 @@ mean D_exp_2040 if hh_cov_2040==1 & pid==1 [aw=wgt2], over(decile) // among bene
 
 encode Region, gen(region2)
 mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2) // children with disability
-*mean D_exp_2040 if hh_cov_2040==1 & pid==1 [aw=wgt2], over(region2) 
 
-*br hhid age severe pc_exp_w tv_cov_2040* *exp_2040 if Region=="Acholi" & severe==1 
+mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(decile) // children with disability
+
+mean D_exp_2040 if hh_cov_2040==1 & pid==1 [aw=wgt2], over(decile) // beneficiaries
 
 // POVERTY
 
@@ -219,6 +220,9 @@ mean p1_sp* if (severe==1|moderate==1) & age<18 [aw=wgt2] // cwd
 mean p0_ipl2* [aw=wgt2]
 mean p0_ipl3* [aw=wgt2]
 mean p0_ipl6* [aw=wgt2]
+
+**# Bookmark #1
+mean p0_spline19_*exp_* p1_spline19_*exp_* if hh_cov_2040==1 [aw=wgt2] 
 
 /*
 mat B = J(1,1,.)

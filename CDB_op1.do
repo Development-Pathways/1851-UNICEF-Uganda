@@ -85,7 +85,8 @@ winsor2 pc_exp, by(Region)
 
 forval yy = 25/40 {
 	
-	gen tv_sev_20`yy' = 100000 if sev_20`yy'==1	
+**# Bookmark #6
+	gen tv_sev_20`yy' = 50000 if sev_20`yy'==1	
 	egen tv_sev_20`yy'_pc = total(tv_sev_20`yy'), by(hhid)
 	replace tv_sev_20`yy'_pc = tv_sev_20`yy'_pc/hhsize
 	
@@ -125,7 +126,12 @@ mean D_exp_2040 if hh_sev_2040==1 & pid==1 [aw=wgt2], over(decile) // among bene
 
 encode Region, gen(region2)
 mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2) // children with disability
-*mean D_exp_2040 if hh_sev_2040==1 & pid==1 [aw=wgt2], over(region2) 
+
+**# Bookmark #5
+mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(decile) // children with disability
+
+mean D_exp_2040 if hh_sev_2040==1 & pid==1 [aw=wgt2], over(decile) // beneficiaries
+
 
 *br hhid age severe pc_exp_w tv_sev_2040* *exp_2040 if Region=="Acholi" & severe==1 
 
@@ -198,6 +204,9 @@ mean p1_sp* if (severe==1|moderate==1) & age<18 [aw=wgt2] // cwd
 mean p0_ipl2* [aw=wgt2]
 mean p0_ipl3* [aw=wgt2]
 mean p0_ipl6* [aw=wgt2]
+
+**# Bookmark #4
+mean p0_spline19_*exp_* p1_spline19_*exp_* if hh_sev_2040==1 [aw=wgt2] 
 
 /*
 mat B = J(1,1,.)
