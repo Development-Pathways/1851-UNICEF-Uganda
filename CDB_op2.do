@@ -101,28 +101,54 @@ keep if !missing(pc_exp)
 
 // CONSUMPTION
 
+* winsorise
+winsor2 pc_exp, by(Region)
+
 forval yy = 25/40 {
 	
-	gen tv_cov_20`yy' = 50000 if cov_20`yy'==1	
-	replace tv_cov_20`yy' = 100000 if cov_20`yy'==1 & severe==1
-	
+	gen tv_cov_20`yy' = 100000 if cov_20`yy'==1	
 	egen tv_cov_20`yy'_pc = total(tv_cov_20`yy'), by(hhid)
 	replace tv_cov_20`yy'_pc = tv_cov_20`yy'_pc/hhsize
 	
-	egen exp_op1_20`yy' = rowtotal(pc_exp tv_cov_20`yy'_pc)
-	gen D_exp_op1_20`yy' = (exp_op1_20`yy'-pc_exp)/pc_exp
+	egen exp_20`yy' = rowtotal(pc_exp_w tv_cov_20`yy'_pc)
+	gen D_exp_20`yy' = (exp_20`yy'-pc_exp_w)/pc_exp_w
 }
 
-mean pc_exp exp_op1_* D_exp_op1_20* [aw=wgt2] // national level
+mean pc_exp_w exp_* D_exp_20* if pid==1 [aw=wgt2] // national level
+
+mean pc_exp_w exp_* D_exp_20* if (severe==1|moderate==1) & age<18 [aw=wgt2] // children with disability
 
 mat A = J(1,1,.)
 forval yy = 25/40 {
-	su D_exp_op1_20`yy' if cov_20`yy'==1 [aw=wgt2] // among beneficiaries
+	su pc_exp_w if hh_cov_20`yy'==1 & pid==1 [aw=wgt2] // among beneficiary households
 	mat A = A \ r(mean)
 }
+
+mat B = J(1,1,.)
+forval yy = 25/40 {
+	su exp_20`yy' if hh_cov_20`yy'==1 & pid==1 [aw=wgt2] // among beneficiary households
+	mat B = B \ r(mean)
+}
+
+mat C = J(1,1,.)
+forval yy = 25/40 {
+	su D_exp_20`yy' if hh_cov_20`yy'==1 & pid==1 [aw=wgt2] // among beneficiary households
+	mat C = C \ r(mean)
+}
+
+mat A = A, B, C 
 mat list A
 
-mean pc_exp exp_op1_2040 D_exp_op1_2040 [aw=wgt2], over(decile) // national level full rollout
+/*
+mean /*pc_exp_w exp_2040*/ D_exp_2040 if pid==1 [aw=wgt2], over(decile) // national level full rollout
+mean D_exp_2040 if hh_cov_2040==1 & pid==1 [aw=wgt2], over(decile) // among beneficiary households
+*/
+
+encode Region, gen(region2)
+mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2) // children with disability
+*mean D_exp_2040 if hh_cov_2040==1 & pid==1 [aw=wgt2], over(region2) 
+
+*br hhid age severe pc_exp_w tv_cov_2040* *exp_2040 if Region=="Acholi" & severe==1 
 
 // POVERTY
 
@@ -132,17 +158,80 @@ gen pov_base = pc_exp09<spline // 15.20749
 gen spline19 = spline*(pc_exp/pc_exp09)
 * gen pov_check = pc_exp<spline19 // 15.20748
 
-forval yy = 25/40 {
-	gen poor_op1_20`yy' = exp_op1_20`yy'<spline19
+// international poverty lines
+gen cpi2017 = 166.8 
+gen cpi2019 = 176 // https://data.worldbank.org/indicator/FP.CPI.TOTL?end=2019&locations=UG
+gen ppp2017 = 1219.19 //https://data.worldbank.org/indicator/PA.NUS.PRVT.PP?locations=UG
+
+gen cf = ppp2017*(cpi2019/cpi2017)*(365/12)
+
+gen ipl215 = cf * 2.15
+label variable ipl215 "International poverty line of PPP$2.15 per person per day, annualised in 2019 LCU"
+
+gen ipl365 = cf * 3.65
+label variable ipl365 "International poverty line of PPP$3.65 per person per day, annualised in 2019 LCU"
+
+gen ipl658 = cf * 6.58
+label variable ipl658 "International poverty line of PPP$6.58 per person per day, annualised in 2019 LCU"
+
+/* Create FGT poverty measures
+label define poor 0 "Above poverty line" 1 "Below poverty line"
+foreach var of varlist spline19 ipl* {
+	gen poor = .
+	replace poor = 0 if cons_pc != .
+	replace poor = 1 if cons_pc <= `var' & cons_pc != .
+	gen p0_`var' = poor * ((`var'- cons_pc)/`var')^0
+	gen p1_`var' = poor * ((`var'- cons_pc)/`var')^1
+  	gen p2_`var' = poor * ((`var'- cons_pc)/`var')^2
+  label values p0_`var' poor
+  label variable p0_`var' "Poverty status"
+  label variable p1_`var' "Poverty gap"
+   label variable p2_`var' "Poverty severity"
+	drop poor
+}
+*/
+
+foreach exp of varlist pc_exp_w exp_20* {
+	foreach line of varlist spline19 ipl* {
+		gen poor = .
+		replace poor = 0 if `exp' != .
+		replace poor = 1 if `exp' <= `line' & `exp' != .
+		gen p0_`line'_`exp' = poor * ((`line'- `exp')/`line')^0
+		gen p1_`line'_`exp' = poor * ((`line'- `exp')/`line')^1
+		gen p2_`line'_`exp' = poor * ((`line'- `exp')/`line')^2
+		drop poor
+	}
 }
 
-mean pov_base poor_op1_20* [aw=wgt2] // national level
+/*
+forval yy = 25/40 {
+	gen poor_20`yy' = exp_20`yy'<spline19
+}
+*/
 
+mean p0_sp* [aw=wgt2] // national level national pov line
+mean p1_sp* [aw=wgt2]
+mean p2_sp* [aw=wgt2]
+
+mean p0_sp* if (severe==1|moderate==1) & age<18 [aw=wgt2] // cwd
+mean p1_sp* if (severe==1|moderate==1) & age<18 [aw=wgt2] // cwd
+
+mean p0_ipl2* [aw=wgt2]
+mean p0_ipl3* [aw=wgt2]
+mean p0_ipl6* [aw=wgt2]
+
+/*
 mat B = J(1,1,.)
 forval yy = 25/40 {
-	su poor_op1_20`yy' if cov_20`yy'==1 [aw=wgt2] // among beneficiaries
+	su poor_20`yy' if cov_20`yy'==1 [aw=wgt2] // among beneficiaries
 	mat B = B \ r(mean)
 }
 mat list B
+*/
 
-mean poor_2019 poor_op1_2040 [aw=wgt2], over(age5yrs) // national level full rollout
+* mean pov_base poor_2040 [aw=wgt2], over(age5yrs) // national level full rollout
+mean p0_spline19_pc_exp p0_spline19_exp_2040 [aw=wgt2], over(region2)
+
+* mean pov_base poor_2040 if cov_2040==1 [aw=wgt2], over(age5yrs) // national level full rollout
+mean p0_spline19_pc_exp p0_spline19_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2)
+

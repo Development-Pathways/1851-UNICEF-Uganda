@@ -80,7 +80,7 @@ collect layout (SEE_IND_2to4 HEAR_IND_2to4 WALK_IND_2to4 MOT_IND_2to4 COM_IND_2t
 
 graph box pc_exp
 
-winsor2 pc_exp, cuts(0 99)
+winsor2 pc_exp, cuts(1 99)
 
 cumul pc_exp_w [aw=wgt1], gen(cdf_exp_w)
 replace cdf_exp_w = cdf_exp_w*100
