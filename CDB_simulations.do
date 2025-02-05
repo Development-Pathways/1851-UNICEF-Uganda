@@ -21,9 +21,12 @@ decode district, gen(District)
 
 merge m:1 District using "~/Development Pathways Ltd/UGA_UNICEF_2024_Disability Grant - Technical/Data/pop_by_district_2024.dta", keep(3)
 
-/*
 * disability 0-2 
 tab funcdiff_onset [aw=wgt1], miss // since birth = 2.7%
+
+gen severe_adult = (wgss_seeing==4 | wgss_hearing==4 | wgss_walking==4 | wgss_remembering==4 | wgss_selfcare==4 | wgss_communic==4)
+
+tab funcdiff_onset severe_adult [aw=wgt1], miss cell nofreq // 2.6% moderate 0.10% severe
 
 * average poverty by region
 tab Region poor_2019 [aw=wgt1], row nofreq
