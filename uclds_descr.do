@@ -1,7 +1,7 @@
 
 do "~/Documents/GitHub/1851-UNICEF-Uganda/DISABILITY_2024.do"
 * do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/finalfigures_uclds_data.do"
-do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/excost2.do"
+*do "~/Documents/GitHub/1851-UNICEF-Uganda/SitAn/diloa/excost2.do"
 
 * check each household has one head
 by hhid, sort: egen head_count = total(relation == 1)
@@ -98,6 +98,11 @@ mean pc_exp if pid==1 [aw=wgt2], over(decile)
 * poverty
 
 mean poor_2019 [aw=wgt2], over(hh_disab)
+
+**# Bookmark #3
+tabstat poor_2019 [aw=wgt2], by(Region)
+tabstat FunctionalDifficulty dislevel_sevmod if age<18 [aw=wgt1], by(Region)
+tabstat dislevel_3 dislevel_4 dislevel_sevmod if age<18 [aw=wgt1], by(age)
 
 foreach var of varlist SEE_IND_2to4 HEAR_IND_2to4 WALK_IND_2to4 MOT_IND_2to4 COM_IND_2to4 LEARN_IND_2to4 PLAY_IND_2to4 BEH_IND_2to4 SSHD_2to4 SEE_IND HEAR_IND WALK_IND1 WALK_IND2 WALK_IND SELF_IND COM_IND LEARN_IND REM_IND CONC_IND ACC_IND BEH_IND FRI_IND ANX_IND DEP_IND SSHD_5to17 {
 	table (`var') () if age>=2 & age<18 [aw=wgt1], statistic(mean poor_2019) nototals name (p_`var')
@@ -230,6 +235,9 @@ svy: mean educ_total_cost_wins, over(FunctionalDifficulty_5to17)
 
 ** mean_hours_passistance
 
+
+
+
 	mat stat = J(1,10,.)
 	foreach var in $child5to17 severe_5to17 moderate_child {
 	svy: mean personalassistance if `var'==1 & age>=5 & age<18
@@ -251,3 +259,122 @@ mat list stat
 	mat colnames stat = b se t pvalue ll ul df crit eform N
 	mat rownames stat = $child5to17 severe_5to17 moderate_child 
 mat list stat
+
+*** 20/02 ***
+
+egen has_modsev = max(dislevel_sevmod), by(hhid)
+replace has_modsev=0 if missing(has_modsev)
+
+gen single = (marital_status==3|marital_status==4|marital_status==5) if !missing(marital_status)
+gen single_head = (relation==1 & single==1)
+egen has_single_head = max(single_head), by(hhid)
+
+gen female_head = (relation==1 & sex==2)
+egen has_female_head = max(female_head), by(hhid)
+
+gen minor_head = (relation==1 & age<18)
+egen has_minor_head = max(minor_head), by(hhid)
+
+egen has_wa = max(age>=18 & age<60), by(hhid)
+gen has_skipgen = (has_child==1 & has_elder==1 & has_wa==0)
+
+tabstat has_single_head has_female_head has_minor_head has_skipgen [aw=wgt1] if relation==1, by(has_modsev)
+
+tab has_modsev has_female_head if relation==1 [aw=wgt1], row nofreq
+
+foreach var of varlist has_single_head has_female_head has_minor_head has_skipgen {
+	tab `var' has_modsev if relation==1
+	tabstat hh_income_wk_month hh_income_pck if relation==1 & has_modsev==1 [aw=wgt2], by(`var')
+}
+
+gen cpi2019 = 107.612
+gen cpi2025 = 137.904
+
+replace hh_income_wk_month = hh_income_wk_month * cpi2025/cpi2019
+gen hh_income_pc_2025 = hh_income_wk_month/hhsize
+
+foreach var of varlist has_single_head has_female_head has_minor_head has_skipgen {
+	tabstat hh_income_wk_month hh_income_pc_2025 if relation==1 & has_modsev==1 [aw=wgt2], by(`var')
+}
+
+** 7/03/2025
+
+replace has_passistance = . if has_passistance==.a
+
+global binary has_passistance need_passistance has_adevice has_passistance_hh passistance1_paid has_passistance2 passistance2_paid has_passistance_ext passistance_ext_paid adevice_mobil no_adevice_mobil adevice_hear no_adevice_hear adevice_see no_adevice_see adevice_cognit no_adevice_cognit home_modifications no_home_mod community_mod no_community_mod school_mod no_school_mod
+
+foreach var of varlist $binary {
+	replace `var' = 2-`var' // convert yes/no from 1/2 to 1/0
+}
+
+estpost sum has_passistance-no_school_modneed__98 [aw=wgt1] if age<18
+esttab using "~/Development Pathways Ltd/UGA_UNICEF_2024_Disability Grant - Technical/assist.csv", cells("count mean sd min max") replace
+describe has_passistance-no_school_modneed__98
+
+tab passitance1_relsh if age<18 [aw=wgt1], sort
+tab passistance2_relsh if age<18 [aw=wgt1], sort
+tab passistance_ext_relsh if age<18 [aw=wgt1], sort
+
+tabstat $binary [aw=wgt1] if age>1 & age<18, by(age)
+describe $binary
+foreach var of varlist $binary {
+	label var `var' ""
+}
+table () (age) if age>1 & age<18 [aw=wgt1], statistic(prop $binary )
+
+tabstat $binary [aw=wgt1] if age>1 & age<18, by(SSHD_2to17)
+table () (SSHD_2to17) if age>1 & age<18 [aw=wgt1], statistic(prop $binary )
+
+tab SSHD_2to4 [aw=wgt1] if SSHD_2to4>2
+tab SSHD_5to17 [aw=wgt1] if SSHD_5to17>2
+
+** 13/03 
+
+tab1 passistance1_paid passistance2_paid passistance_ext_paid
+
+gen pass1pay = passistance1_value // monthly
+replace pass1pay = pass1pay/3 if passistance1_paid_freq==4 // every three months
+
+gen pass2pay = passistance2_value if passistance2_value!=98 // monthly
+
+gen pass3pay = passistance_ext_value // monthly
+replace pass3pay = pass3pay/3 if passistance_ext_paid_freq==4 // every three months
+replace pass3pay = pass3pay*365/12 if passistance_ext_paid_freq==1 // per day
+replace pass3pay = . if pass3pay==98
+
+br pass*pay if passistance1_paid==1 | passistance2_paid==1 | passistance_ext_paid==1
+
+egen passpay = rowtotal(pass*pay)
+replace passpay = . if passpay==98 | passpay==0
+
+egen passpay12 = rowtotal(pass1pay pass2pay)
+replace passpay12 = . if passpay12==98 | passpay12==0
+
+su passpay passpay12 pass3pay [aw=wgt2]
+
+su educ_exp_total_hh [aw=wgt2] if (educ_attend==3 | educ_attend_lastyear==1)
+su educ_exp_total_hh [aw=wgt2] if (educ_attend==3 | educ_attend_lastyear==1) & hh_disab_child==0
+su educ_exp_total_hh [aw=wgt2] if (educ_attend==3 | educ_attend_lastyear==1) & hh_disab_child==1
+
+su health_exp_total_hh [aw=wgt2] if suffered_illness==1
+su health_exp_total_hh [aw=wgt2] if suffered_illness==1 & hh_disab_child==0
+su health_exp_total_hh [aw=wgt2] if suffered_illness==1 & hh_disab_child==1
+
+* 2/07
+
+tabstat dislevel_4 [aw=wgt1] if age>=6 & age<=17 , by(age)
+tab age dislevel_4 if age>=6 & age<=17 // 147 obs
+
+tab dislevel_4 has_passistance if age>=6 & age<=17, miss
+tab dislevel_4 need_passistance if age>=6 & age<=17, miss
+
+gen need_care = (has_passistance==1 | need_passistance==1) if !missing(has_passistance)
+
+tab has_passistance need_passistance, miss
+tab need_care, miss
+
+tab dislevel_4 need_care if age>=6 & age<=17
+
+tab dislevel_4 need_care if age>=6 & age<=17 [aw=wgt1], row nofreq
+tab dislevel_4 if age>=6 & age<=17 [aw=wgt1]
+

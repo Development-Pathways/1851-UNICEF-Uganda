@@ -107,13 +107,13 @@ gen FRI_IND = child5to17_friends if child5to17_friends>0 & child5to17_friends<=4
 // WG considers "daily" as at least moderate --> treating daily as moderate and the rest as none
 recode child5to17_anxiety (1=3 "A lot of difficulty") (2=2 "Some difficulty") (3/5=1 "No difficulty"), gen(ANX_IND)
 
-* DEPRESSION DOMAIN *
+* DEPRESSION DOMAIN * <-- 20/02 excluded mental health
 recode child5to17_depressed (1=3 "A lot of difficulty") (2=2 "Some difficulty") (3/5=1 "No difficulty"), gen(DEP_IND)
 
 gen SSHD_5to17 = 0
 replace SSHD_5to17 = . if SEE_IND==. & HEAR_IND ==. & WALK_IND ==. & SELF_IND==. & COM_IND==. & LEARN_IND==. & REM_IND==. & CONC_IND==. & ACC_IND==. & BEH_IND==. & FRI_IND==. //& ANX_IND==. & DEP_IND==.
 replace SSHD_5to17 = 2 if SEE_IND==2 | HEAR_IND ==2 | WALK_IND ==2 | SELF_IND==2 | COM_IND==2 | LEARN_IND==2 | REM_IND==2 | CONC_IND==2 | ACC_IND==2 | BEH_IND==2 | FRI_IND==2
-replace SSHD_5to17 = 3 if SEE_IND==3 | HEAR_IND ==3 | WALK_IND ==3 | SELF_IND==3 | COM_IND==3 | LEARN_IND==3 | REM_IND==3 | CONC_IND==3 | ACC_IND==3 | BEH_IND==3 | FRI_IND==3 | child5to17_anxiety==1 | child5to17_depressed==1
+replace SSHD_5to17 = 3 if SEE_IND==3 | HEAR_IND ==3 | WALK_IND ==3 | SELF_IND==3 | COM_IND==3 | LEARN_IND==3 | REM_IND==3 | CONC_IND==3 | ACC_IND==3 | BEH_IND==3 | FRI_IND==3 //| child5to17_anxiety==1 | child5to17_depressed==1
 replace SSHD_5to17 = 4 if SEE_IND==4 | HEAR_IND ==4 | WALK_IND ==4 | SELF_IND==4 | COM_IND==4 | LEARN_IND==4 | REM_IND==4 | CONC_IND==4 | ACC_IND==4 | BEH_IND==4 | FRI_IND==4
 replace SSHD_5to17 = 1 if SSHD_5to17 == 0
 
@@ -121,6 +121,10 @@ gen SSHD_2to17 = SSHD_2to4
 replace SSHD_2to17 = SSHD_5to17 if age>4
 
 label values SSHD* sshdlb
+
+tab SSHD_2to17, gen(dislevel_)
+
+gen dislevel_sevmod = (SSHD_2to17==3 | SSHD_2to17==4) if !missing(SSHD_2to17)
 
 tab sex [iw=wgt2] // 41,345,431 people
 tab FunctionalDifficulty_5to17 if age>=5 & age<=9 [iw=wgt2] // 457,418 pwd 

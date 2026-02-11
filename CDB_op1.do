@@ -13,8 +13,13 @@ sort hhid
 set seed 999 
 gen disab_below2_sev = runiform()<=0.001 if age<2 & disab_below2_mod!=1
 
-gen severe = (disab_below2_sev==1 |SSHD_2to4==4 | SSHD_5to17==4)
-gen moderate = (disab_below2_mod==1 |SSHD_2to4==3| SSHD_5to17==3)
+replace dislevel_3 = 0 if age<2
+replace dislevel_3 = 1 if disab_below2_mod==1
+rename dislevel_3 moderate
+
+replace dislevel_4 = 0 if age<2
+replace dislevel_4 = 1 if disab_below2_sev==1
+rename dislevel_4 severe
 
 gen pilotsite = (District=="Kassanda"|District=="Mubende"|District=="Kyegegwa"|District=="Kabarole")
 
@@ -87,19 +92,25 @@ gen cpi2017 = 102.741
 gen cpi2019 = 107.612
 gen cpi2025 = 137.904
 
+/*
 sort hhid
 set seed 111
 winsor2 pc_exp, by(Region)
 replace pc_exp_w = pc_exp_w * cpi2025/cpi2019
+*/
 
 sort hhid
 set seed 111
 winsor2 hh_exp_total, by(Region)
 replace hh_exp_total_w = hh_exp_total_w * cpi2025/cpi2019
 
+gen pc_exp_w = hh_exp_total_w/hhsize
+
+/*
 xtile temp = pc_exp_w [aw=wgt2] if pid==1, n(10) // deciles household level welfare
 egen decile_w = max(temp), by(hhid)
 drop temp
+*/
 
 /*
 forval yy = 25/40 {
@@ -160,12 +171,15 @@ mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2) // 
 // POVERTY
 
 * gen poor_2019 = ae_exp09<spline
-gen pov_base = pc_exp09<spline // 15.20749
+su poor_2019 [aw=wgt2]
+local povrate=r(mean)*100
+_pctile pc_exp_w [aw=wgt2], p(`povrate')
+gen npl = r(r1) 
 
-gen spline19 = spline*(pc_exp/pc_exp09)
-* gen pov_check = pc_exp<spline19 // 15.20748
-replace spline19 = spline19 * cpi2025/cpi2019
-egen spline_avg = mean(spline19)
+/* check 
+gen poor_2025 = pc_exp_w < npl
+su poor* [aw=wgt2]
+*/
 
 // international poverty lines
 gen ppp2017 = 1219.19 //https://data.worldbank.org/indicator/PA.NUS.PRVT.PP?locations=UG
@@ -178,12 +192,12 @@ label variable ipl215 "International poverty line of PPP$2.15 per person per day
 gen ipl365 = cf * 3.65
 label variable ipl365 "International poverty line of PPP$3.65 per person per day, annualised in 2019 LCU"
 
-gen ipl658 = cf * 6.58
-label variable ipl658 "International poverty line of PPP$6.58 per person per day, annualised in 2019 LCU"
+gen ipl685 = cf * 6.85
+label variable ipl685 "International poverty line of PPP$6.85 per person per day, annualised in 2019 LCU"
 
 /* Create FGT poverty measures
 label define poor 0 "Above poverty line" 1 "Below poverty line"
-foreach var of varlist spline_avg ipl* {
+foreach var of varlist npl ipl* {
 	gen poor = .
 	replace poor = 0 if cons_pc != .
 	replace poor = 1 if cons_pc <= `var' & cons_pc != .
@@ -199,7 +213,7 @@ foreach var of varlist spline_avg ipl* {
 */
 
 foreach exp of varlist pc_exp_w exp_20*_pc {
-	foreach line of varlist spline_avg ipl* {
+	foreach line of varlist npl ipl* {
 		gen poor = .
 		replace poor = 0 if `exp' != .
 		replace poor = 1 if `exp' <= `line' & `exp' != .
@@ -212,7 +226,7 @@ foreach exp of varlist pc_exp_w exp_20*_pc {
 
 /*
 forval yy = 25/40 {
-	gen poor_20`yy' = exp_20`yy'<spline_avg
+	gen poor_20`yy' = exp_20`yy'<npl
 }
 */
 
@@ -221,27 +235,27 @@ forval yy = 25/40 {
 * national level
 mean hh_exp_total_w exp_2040 pc_exp_w exp_2040_pc D_exp_2040 if pid==1 [aw=wgt2] 
 mean D_exp_2040 if pid==1 [aw=wgt2], over(decile) 
-mean p0_spline_avg_pc_exp_w p0_spline_avg_exp_2040 p1_spline_avg_pc_exp_w p1_spline_avg_exp_2040 p2_spline_avg_pc_exp_w p2_spline_avg_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl658_pc_exp_w p0_ipl658_exp_2040 [aw=wgt2] 
+mean p0_npl_pc_exp_w p0_npl_exp_2040 p1_npl_pc_exp_w p1_npl_exp_2040 p2_npl_pc_exp_w p2_npl_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl685_pc_exp_w p0_ipl685_exp_2040 [aw=wgt2] 
 
 * children with disability
 mean hh_exp_total_w exp_2040 pc_exp_w exp_2040_pc D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2] 
 mean D_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(decile) 
-mean p0_spline_avg_pc_exp_w p0_spline_avg_exp_2040 p1_spline_avg_pc_exp_w p1_spline_avg_exp_2040 p2_spline_avg_pc_exp_w p2_spline_avg_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl658_pc_exp_w p0_ipl658_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2] 
+mean p0_npl_pc_exp_w p0_npl_exp_2040 p1_npl_pc_exp_w p1_npl_exp_2040 p2_npl_pc_exp_w p2_npl_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl685_pc_exp_w p0_ipl685_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2] 
 
 * beneficiaries
 mean hh_exp_total_w exp_2040 pc_exp_w exp_2040_pc D_exp_2040 if sev_2040==1 [aw=wgt2] 
 mean D_exp_2040 if sev_2040==1  [aw=wgt2], over(decile) 
-mean p0_spline_avg_pc_exp_w p0_spline_avg_exp_2040 p1_spline_avg_pc_exp_w p1_spline_avg_exp_2040 p2_spline_avg_pc_exp_w p2_spline_avg_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl658_pc_exp_w p0_ipl658_exp_2040 if sev_2040==1 [aw=wgt2] 
+mean p0_npl_pc_exp_w p0_npl_exp_2040 p1_npl_pc_exp_w p1_npl_exp_2040 p2_npl_pc_exp_w p2_npl_exp_2040 p0_ipl215_pc_exp_w p0_ipl215_exp_2040 p0_ipl365_pc_exp_w p0_ipl365_exp_2040 p0_ipl685_pc_exp_w p0_ipl685_exp_2040 if sev_2040==1 [aw=wgt2] 
 
 * share of beneficiaries emerged from poverty 
-tab p0_spline_avg_pc_exp_w p0_spline_avg_exp_2040 if sev_2040==1 [aw=wgt2], cell nofreq 
+tab p0_npl_pc_exp_w p0_npl_exp_2040 if sev_2040==1 [aw=wgt2], cell nofreq 
 
 /*
 * mean pov_base poor_2040 [aw=wgt2], over(age5yrs) // national level full rollout
-mean p0_spline_avg_pc_exp p0_spline_avg_exp_2040 [aw=wgt2], over(region2)
+mean p0_npl_pc_exp p0_npl_exp_2040 [aw=wgt2], over(region2)
 
 * mean pov_base poor_2040 if sev_2040==1 [aw=wgt2], over(age5yrs) // national level full rollout
-mean p0_spline_avg_pc_exp p0_spline_avg_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2)
+mean p0_npl_pc_exp p0_npl_exp_2040 if (severe==1|moderate==1) & age<18 [aw=wgt2], over(region2)
 */
 
 /*
@@ -254,9 +268,12 @@ tab other_tooro sex if severe==1 & age<=17 //[aw=wgt1], row nofreq
 tab other_buganda sex if severe==1 & age<=17 //[aw=wgt1], row nofreq
 
 tab decile if severe==1 & age<=17 //[aw=wgt2]
-tab decile if (severe==1|moderate==1) [aw=wgt2]
-
 tab age sex if severe==1 & age<=17 [aw=wgt1], row nofreq
+
+*/
+
+
+tab decile if (severe==1|moderate==1) [aw=wgt2]
 
 foreach imp in Seeing Hearing Walking Communication Learning Behaviour {
 	clonevar `imp'_2to17 = `imp'_5to17
@@ -264,5 +281,3 @@ foreach imp in Seeing Hearing Walking Communication Learning Behaviour {
 }
 
 tab1 Seeing_2to17 Hearing_2to17 Walking_2to17 Communication_2to17 Learning_2to17 Behaviour_2to17 FineMotor_2to4 Playing_2to4 Selfcare_5to17 Remembering_5to17 Concentrating_5to17 AcceptingChange_5to17 MakingFriends_5to17 Anxiety_5to17 Depression_5to17 if (severe==1|moderate==1) [aw=wgt1], miss
-
-*/
